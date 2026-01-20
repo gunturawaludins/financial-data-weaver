@@ -3,7 +3,8 @@ import * as XLSX from 'xlsx';
 import { SheetData, ProcessedSheet, ETLResult } from './types';
 import { sanitizeColumnNames, sanitizeTableName } from './sanitizer';
 import { cleanData, findDataStartRow } from './cleaner';
-
+import { processEnrichmentPipeline } from './enrichment';
+import { isMasterLoaded } from './masterData';
 // Sheet patterns that need special handling
 const VD510_SHEET_PATTERN = /vd510|vd5[\-_]?10|formulir\s*10/i;
 const STANDARD_SHEET_PATTERN = /vd5\d{1,2}|formulir\s*\d+/i;
@@ -182,14 +183,24 @@ function extractVD510Special(worksheet: XLSX.WorkSheet, sheetName: string): Shee
 
 function processSheetData(sheetData: SheetData, fileName: string): ProcessedSheet {
   // Clean the data
-  const { cleanedData, removedRows, removedColumns } = cleanData(sheetData.rows, sheetData.headers);
+  const { cleanedData, removedColumns } = cleanData(sheetData.rows, sheetData.headers);
   
   // Filter out removed columns from headers
-  const finalHeaders = sheetData.headers.filter(h => !removedColumns.includes(h));
+  let finalHeaders = sheetData.headers.filter(h => !removedColumns.includes(h));
+  let processedData = cleanedData;
+  
+  // Apply enrichment if master data is loaded
+  let enrichmentStats = null;
+  if (isMasterLoaded()) {
+    const enrichmentResult = processEnrichmentPipeline(cleanedData, finalHeaders);
+    processedData = enrichmentResult.processedData;
+    finalHeaders = enrichmentResult.newHeaders;
+    enrichmentStats = enrichmentResult.stats;
+  }
 
   // Add metadata columns
   const uploadDate = new Date().toISOString();
-  const dataWithMetadata = cleanedData.map((row) => ({
+  const dataWithMetadata = processedData.map((row) => ({
     ...row,
     _fileName: fileName,
     _uploadDate: uploadDate,
@@ -205,6 +216,7 @@ function processSheetData(sheetData: SheetData, fileName: string): ProcessedShee
       uploadDate,
       originalRowCount: sheetData.rowCount,
       cleanedRowCount: cleanedData.length,
+      enrichmentStats,
     },
   };
 }

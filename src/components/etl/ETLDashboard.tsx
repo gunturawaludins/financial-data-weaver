@@ -12,11 +12,14 @@ import {
   FileSpreadsheet,
   Save,
   Loader2,
-  Info
+  Info,
+  Users,
+  TrendingUp
 } from 'lucide-react';
 import { FileUpload } from './FileUpload';
 import { DataPreview } from './DataPreview';
 import { DatabaseMonitor } from './DatabaseMonitor';
+import { MasterDataUpload } from './MasterDataUpload';
 import { extractFromExcel, ProcessedSheet, ETLResult } from '@/lib/etl';
 import { createTableIfNotExists, appendRecords } from '@/lib/etl/database';
 import { DatabaseRecord } from '@/lib/etl/types';
@@ -29,6 +32,7 @@ export function ETLDashboard() {
   const [etlResult, setEtlResult] = useState<ETLResult | null>(null);
   const [selectedSheetIndex, setSelectedSheetIndex] = useState(0);
   const [fileName, setFileName] = useState<string>('');
+  const [masterDataVersion, setMasterDataVersion] = useState(0);
 
   const handleFileSelect = async (file: File) => {
     setIsProcessing(true);
@@ -131,15 +135,24 @@ export function ETLDashboard() {
 
           {/* Upload Tab */}
           <TabsContent value="upload" className="space-y-6">
+            {/* Master Data Section */}
+            <MasterDataUpload 
+              onMasterDataLoaded={() => setMasterDataVersion(v => v + 1)} 
+            />
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="w-5 h-5" />
-                  Upload File Excel
+                  Upload File Laporan MKBD
                 </CardTitle>
                 <CardDescription>
-                  Unggah file Excel laporan MKBD. Sistem akan otomatis memindai semua sheet,
-                  membersihkan data, dan menyiapkan untuk penyimpanan.
+                  Unggah file Excel laporan MKBD. Sistem akan otomatis:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Memindai semua sheet dan membersihkan data</li>
+                    <li>Mencocokkan Kode Efek dengan Master Data (VLOOKUP)</li>
+                    <li>Menghitung GRUP NILAI PASAR WAJAR (Agregasi)</li>
+                  </ul>
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -183,6 +196,50 @@ export function ETLDashboard() {
                           </li>
                         )}
                       </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Enrichment Stats */}
+                {currentSheet?.metadata.enrichmentStats && (
+                  <Alert>
+                    <TrendingUp className="w-4 h-4" />
+                    <AlertTitle>Statistik Enrichment & Agregasi</AlertTitle>
+                    <AlertDescription>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-lg font-bold text-primary">
+                            {currentSheet.metadata.enrichmentStats.matchedCount}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Matched</div>
+                        </div>
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-lg font-bold text-orange-500">
+                            {currentSheet.metadata.enrichmentStats.unmatchedCount}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Non-Grup</div>
+                        </div>
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-lg font-bold text-blue-500">
+                            {currentSheet.metadata.enrichmentStats.groupCount}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Grup Unik</div>
+                        </div>
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-lg font-bold text-green-500">
+                            {(currentSheet.metadata.enrichmentStats.totalGroupValue / 1e9).toFixed(2)}B
+                          </div>
+                          <div className="text-xs text-muted-foreground">Total Nilai</div>
+                        </div>
+                      </div>
+                      {currentSheet.metadata.enrichmentStats.kodeEfekColumn && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Kolom Kode: <Badge variant="outline">{currentSheet.metadata.enrichmentStats.kodeEfekColumn}</Badge>
+                          {currentSheet.metadata.enrichmentStats.nilaiPasarColumn && (
+                            <> • Kolom Nilai: <Badge variant="outline">{currentSheet.metadata.enrichmentStats.nilaiPasarColumn}</Badge></>
+                          )}
+                        </p>
+                      )}
                     </AlertDescription>
                   </Alert>
                 )}

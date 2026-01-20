@@ -8,6 +8,15 @@ export interface SheetData {
   rowCount: number;
 }
 
+export interface EnrichmentStats {
+  kodeEfekColumn: string | null;
+  nilaiPasarColumn: string | null;
+  matchedCount: number;
+  unmatchedCount: number;
+  groupCount: number;
+  totalGroupValue: number;
+}
+
 export interface ProcessedSheet {
   sheetName: string;
   tableName: string;
@@ -18,6 +27,7 @@ export interface ProcessedSheet {
     uploadDate: string;
     originalRowCount: number;
     cleanedRowCount: number;
+    enrichmentStats?: EnrichmentStats | null;
   };
 }
 
