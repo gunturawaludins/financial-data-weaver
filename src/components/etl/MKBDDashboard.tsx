@@ -138,7 +138,7 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
               <Banknote className="w-5 h-5 text-blue-500" />
-              <Badge variant="outline" className="text-xs">VD51</Badge>
+              <Badge variant="outline" className="text-xs">VD59</Badge>
             </div>
             <p className="text-xs text-muted-foreground">Total Aset Lancar</p>
             <p className="text-xl font-bold">{formatShortNumber(result.totalAsetLancar)}</p>
@@ -150,7 +150,7 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
               <Scale className="w-5 h-5 text-amber-500" />
-              <Badge variant="outline" className="text-xs">VD52</Badge>
+              <Badge variant="outline" className="text-xs">VD59</Badge>
             </div>
             <p className="text-xs text-muted-foreground">Total Liabilitas</p>
             <p className="text-xl font-bold">{formatShortNumber(result.totalLiabilitas)}</p>
@@ -246,28 +246,94 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
         </Card>
       )}
 
+      {/* VD59 Updates */}
+      {result.vd59Updates && result.vd59Updates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Update VD59 (Calculated Values)</CardTitle>
+            <CardDescription>
+              Nilai yang diperbarui berdasarkan perhitungan sistem
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium text-muted-foreground">Baris</th>
+                    <th className="text-left py-2 px-2 font-medium text-muted-foreground">Keterangan</th>
+                    <th className="text-left py-2 px-2 font-medium text-muted-foreground">Kolom</th>
+                    <th className="text-right py-2 px-2 font-medium text-muted-foreground">Nilai Lama</th>
+                    <th className="text-right py-2 px-2 font-medium text-muted-foreground">Nilai Baru</th>
+                    <th className="text-left py-2 px-2 font-medium text-muted-foreground">Formula</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.vd59Updates.map((update, idx) => (
+                    <tr key={idx} className="border-b hover:bg-muted/50">
+                      <td className="py-2 px-2 font-mono">{update.rowIndex}</td>
+                      <td className="py-2 px-2 text-xs max-w-[200px] truncate" title={update.rowDescription}>
+                        {update.rowDescription}
+                      </td>
+                      <td className="py-2 px-2 font-mono text-xs">{update.column}</td>
+                      <td className="py-2 px-2 text-right font-mono text-muted-foreground">
+                        {formatShortNumber(update.oldValue)}
+                      </td>
+                      <td className="py-2 px-2 text-right font-mono font-bold text-primary">
+                        {formatShortNumber(update.newValue)}
+                      </td>
+                      <td className="py-2 px-2 text-xs text-muted-foreground max-w-[200px] truncate" title={update.formula}>
+                        {update.formula}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Calculation Flow */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Alur Perhitungan</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <Badge variant="outline" className="font-mono">
-              Aset Lancar: {formatShortNumber(result.totalAsetLancar)}
-            </Badge>
-            <span className="text-muted-foreground">−</span>
-            <Badge variant="outline" className="font-mono">
-              Liabilitas: {formatShortNumber(result.totalLiabilitas)}
-            </Badge>
-            <span className="text-muted-foreground">−</span>
-            <Badge variant="destructive" className="font-mono">
-              Ranking: {formatShortNumber(result.totalRankingLiabilities)}
-            </Badge>
-            <span className="text-muted-foreground">=</span>
-            <Badge variant="default" className="font-mono">
-              Modal Kerja: {formatShortNumber(result.modalKerja)}
-            </Badge>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant="outline" className="font-mono">
+                Aset Lancar: {formatShortNumber(result.totalAsetLancar)}
+              </Badge>
+              <span className="text-muted-foreground">−</span>
+              <Badge variant="outline" className="font-mono">
+                Liabilitas: {formatShortNumber(result.totalLiabilitas)}
+              </Badge>
+              <span className="text-muted-foreground">−</span>
+              <Badge variant="destructive" className="font-mono">
+                Ranking: {formatShortNumber(result.totalRankingLiabilities)}
+              </Badge>
+              <span className="text-muted-foreground">=</span>
+              <Badge variant="default" className="font-mono">
+                Modal Kerja: {formatShortNumber(result.modalKerja)}
+              </Badge>
+            </div>
+            
+            {result.haircutSum > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="default" className="font-mono">
+                  Modal Kerja: {formatShortNumber(result.modalKerja)}
+                </Badge>
+                <span className="text-muted-foreground">−</span>
+                <Badge variant="secondary" className="font-mono">
+                  Haircut (33-92): {formatShortNumber(result.haircutSum)}
+                </Badge>
+                <span className="text-muted-foreground">=</span>
+                <Badge variant="default" className="font-mono bg-green-600">
+                  MKBD Disesuaikan: {formatShortNumber(result.mkbdDisesuaikan)}
+                </Badge>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
