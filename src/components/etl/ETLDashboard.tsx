@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,14 +13,16 @@ import {
   Save,
   Loader2,
   Info,
-  Users,
+  Calculator,
   TrendingUp
 } from 'lucide-react';
 import { FileUpload } from './FileUpload';
-import { DataPreview } from './DataPreview';
+import { ExcelStylePreview } from './ExcelStylePreview';
 import { DatabaseMonitor } from './DatabaseMonitor';
 import { MasterDataUpload } from './MasterDataUpload';
-import { extractFromExcel, ProcessedSheet, ETLResult } from '@/lib/etl';
+import { FormulaEditor } from './FormulaEditor';
+import { MKBDDashboard } from './MKBDDashboard';
+import { extractFromExcel, ETLResult, calculateMKBD, MKBDCalculationResult } from '@/lib/etl';
 import { createTableIfNotExists, appendRecords } from '@/lib/etl/database';
 import { DatabaseRecord } from '@/lib/etl/types';
 import { toast } from 'sonner';
@@ -33,10 +35,12 @@ export function ETLDashboard() {
   const [selectedSheetIndex, setSelectedSheetIndex] = useState(0);
   const [fileName, setFileName] = useState<string>('');
   const [masterDataVersion, setMasterDataVersion] = useState(0);
+  const [mkbdResult, setMkbdResult] = useState<MKBDCalculationResult | null>(null);
 
   const handleFileSelect = async (file: File) => {
     setIsProcessing(true);
     setEtlResult(null);
+    setMkbdResult(null);
     setFileName(file.name);
 
     try {
@@ -44,8 +48,11 @@ export function ETLDashboard() {
       setEtlResult(result);
       setSelectedSheetIndex(0);
       
+      // Calculate MKBD automatically
       if (result.success && result.sheets.length > 0) {
-        toast.success(`${result.sheets.length} sheet berhasil diproses`);
+        const mkbd = calculateMKBD(result.sheets);
+        setMkbdResult(mkbd);
+        toast.success(`${result.sheets.length} sheet diproses, MKBD dihitung otomatis`);
       } else if (!result.success) {
         toast.error('Gagal memproses file');
       }
@@ -288,7 +295,7 @@ export function ETLDashboard() {
                       )}
 
                       {/* Data Preview */}
-                      {currentSheet && <DataPreview sheet={currentSheet} />}
+                      {currentSheet && <ExcelStylePreview sheet={currentSheet} />}
                     </CardContent>
                   </Card>
                 )}
