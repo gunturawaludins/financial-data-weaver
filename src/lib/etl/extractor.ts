@@ -5,6 +5,7 @@ import { sanitizeColumnNames, sanitizeTableName } from './sanitizer';
 import { cleanData, findDataStartRow } from './cleaner';
 import { processEnrichmentPipeline } from './enrichment';
 import { isMasterLoaded } from './masterData';
+import { applyMKBDCorrections } from './mkbdCalculator';
 // Sheet patterns that need special handling
 const VD510_SHEET_PATTERN = /vd510|vd5[\-_]?10|formulir\s*10/i;
 const STANDARD_SHEET_PATTERN = /vd5\d{1,2}|formulir\s*\d+/i;
@@ -56,6 +57,13 @@ export async function extractFromExcel(file: File): Promise<ETLResult> {
     if (result.sheets.length === 0) {
       result.success = false;
       result.errors.push('Tidak ada sheet yang berhasil diproses');
+    }
+
+    // Force-correct perhitungan lintas sheet (VD510 & VD59) sesuai rule audit.
+    // Ini dilakukan setelah enrichment + cleaning agar kolom tambahan (mis. GRUP_NILAI_PASAR_WAJAR) tersedia.
+    if (result.success && result.sheets.length > 0) {
+      const corrected = applyMKBDCorrections(result.sheets);
+      result.sheets = corrected.sheets;
     }
 
   } catch (error) {
