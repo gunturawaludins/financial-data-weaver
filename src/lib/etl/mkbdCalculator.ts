@@ -6,6 +6,7 @@ import { parseNumericValue } from './enrichment';
 
 export interface MKBDCalculationResult {
   totalAsetLancar: number;
+  totalEkuitas: number;
   totalLiabilitas: number;
   totalRankingLiabilities: number;
   modalKerja: number;
@@ -73,11 +74,11 @@ export const DEFAULT_FORMULAS: Record<string, FormulaDefinition> = {
   rankingLiabilitiesPerItem: {
     id: 'rankingLiabilitiesPerItem',
     name: 'Ranking Liabilities per Item',
-    description: 'Nilai Grup - (20% x Total Aset Lancar), minimum 0',
-    formula: 'MAX(0, NILAI_GRUP - (0.20 * TOTAL_MODAL_SENDIRI))',
-    inputs: ['NILAI_GRUP', 'TOTAL_MODAL_SENDIRI'],
+    description: 'Nilai Grup - (20% x Total Ekuitas), minimum 0',
+    formula: 'MAX(0, NILAI_GRUP - (0.20 * TOTAL_EKUITAS))',
+    inputs: ['NILAI_GRUP', 'TOTAL_EKUITAS'],
     calculate: (inputs) => 
-      Math.max(0, inputs.NILAI_GRUP - (0.20 * inputs.TOTAL_MODAL_SENDIRI)),
+      Math.max(0, inputs.NILAI_GRUP - (0.20 * inputs.TOTAL_EKUITAS)),
   },
   mkbdDisesuaikan: {
     id: 'mkbdDisesuaikan',
@@ -166,6 +167,28 @@ export function extractVD52Values(sheet: ProcessedSheet): Record<string, number>
   }
 
   return values;
+}
+
+// Extract TOTAL EKUITAS from VD52, row with "TOTAL EKUITAS" and column "Saldo"
+export function extractVD52TotalEkuitas(sheet: ProcessedSheet): number {
+  const saldoCol = findColumnByPattern(sheet.headers, /saldo/i);
+
+  for (const row of sheet.data) {
+    const rowText = Object.values(row)
+      .filter(v => typeof v === 'string')
+      .join(' ');
+
+    if (/total\s*ekuitas/i.test(rowText)) {
+      if (saldoCol && row[saldoCol] !== null && row[saldoCol] !== undefined) {
+        return parseNumericValue(row[saldoCol]);
+      }
+      // fallback to any numeric in the row
+      const numericValue = findNumericValueInRow(row);
+      if (numericValue !== null) return numericValue;
+    }
+  }
+
+  return 0;
 }
 
 // Extract VD53 values (Ranking Liabilities summary)
@@ -262,13 +285,13 @@ export function extractVD59MKBDDiwajibkan(sheet: ProcessedSheet): number {
   return 25_000_000_000; // Default minimum
 }
 
-// Process VD510 and calculate Ranking Liabilities using TOTAL ASET LANCAR from VD59
+// Process VD510 and calculate Ranking Liabilities using TOTAL EKUITAS from VD52
 export function calculateVD510RankingLiabilities(
   sheet: ProcessedSheet,
-  totalAsetLancar: number
+  totalEkuitas: number
 ): VD510CalculationDetail[] {
   const details: VD510CalculationDetail[] = [];
-  const batas20Persen = totalAsetLancar * 0.20;
+  const batas20Persen = totalEkuitas * 0.20;
 
   // Find relevant columns - support GRUP_NILAI_PASAR_WAJAR from enrichment
   const kodeEfekCol = findColumnByPattern(sheet.headers, /kode\s*efek/i);
@@ -293,15 +316,15 @@ export function calculateVD510RankingLiabilities(
       continue;
     }
     
-    // NEW FORMULA: Nilai_Rangking_Liabilities = GRUP_NILAI_PASAR_WAJAR - (20% * TOTAL ASET LANCAR)
+    // FORMULA: Nilai_Rangking_Liabilities = GRUP_NILAI_PASAR_WAJAR - (20% * TOTAL EKUITAS)
     const nilaiRankingLiabilities = Math.max(0, grupNilaiPasarWajar - batas20Persen);
     
     // Calculate percentage
-    const persentaseTerhadapModal = totalAsetLancar > 0 
-      ? (grupNilaiPasarWajar / totalAsetLancar) * 100 
+    const persentaseTerhadapModal = totalEkuitas > 0 
+      ? (grupNilaiPasarWajar / totalEkuitas) * 100 
       : 0;
     
-    const formula = `MAX(0, ${formatNumber(grupNilaiPasarWajar)} - (20% × ${formatNumber(totalAsetLancar)}))`;
+    const formula = `MAX(0, ${formatNumber(grupNilaiPasarWajar)} - (20% × ${formatNumber(totalEkuitas)}))`;
     
     details.push({
       rowIndex,
@@ -446,9 +469,11 @@ export function calculateMKBD(sheets: ProcessedSheet[]): MKBDCalculationResult {
   // Find relevant sheets
   const vd59Sheet = sheets.find(s => /vd5[\-_]?9\b|formulir[\-_\s]*9\b/i.test(s.sheetName));
   const vd510Sheet = sheets.find(s => /vd5[\-_]?10\b|formulir[\-_\s]*10\b/i.test(s.sheetName));
+  const vd52Sheet = sheets.find(s => /vd5[\-_]?2\b|formulir[\-_\s]*2\b/i.test(s.sheetName));
 
-  // === PASS 1: Extract TOTAL ASET LANCAR from VD59 Row 2, Column Jumlah ===
+  // === PASS 1: Extract key bases (VD59 + VD52) ===
   let totalAsetLancar = 0;
+  let totalEkuitas = 0;
   let totalLiabilitas = 0;
   let mkbdDiwajibkan = 25_000_000_000;
 
@@ -488,13 +513,26 @@ export function calculateMKBD(sheets: ProcessedSheet[]): MKBDCalculationResult {
     });
   }
 
-  // === PASS 2: Calculate VD510 Ranking Liabilities using TOTAL ASET LANCAR ===
+  if (vd52Sheet) {
+    totalEkuitas = extractVD52TotalEkuitas(vd52Sheet);
+
+    calculationSteps.push({
+      id: 'pass1_total_ekuitas',
+      name: 'Total Ekuitas (VD52, TOTAL EKUITAS kolom Saldo)',
+      formula: 'Extract from VD52 row "TOTAL EKUITAS", column "Saldo"',
+      inputValues: { value: totalEkuitas },
+      result: totalEkuitas,
+      source: 'VD52',
+      editable: false,
+    });
+  }
+
+  // === PASS 2: Calculate VD510 Ranking Liabilities using TOTAL EKUITAS ===
   let vd510Details: VD510CalculationDetail[] = [];
   let totalRankingLiabilities = 0;
 
-  if (vd510Sheet && totalAsetLancar > 0) {
-    // NEW: Use TOTAL ASET LANCAR from VD59, not Modal Sendiri
-    vd510Details = calculateVD510RankingLiabilities(vd510Sheet, totalAsetLancar);
+  if (vd510Sheet && totalEkuitas > 0) {
+    vd510Details = calculateVD510RankingLiabilities(vd510Sheet, totalEkuitas);
     
     // Get Total Ranking Liabilities (sum from VD510, represents row 33 Total Portofolio)
     totalRankingLiabilities = getTotalRankingLiabilitiesFromVD510(vd510Details);
@@ -502,10 +540,10 @@ export function calculateMKBD(sheets: ProcessedSheet[]): MKBDCalculationResult {
     calculationSteps.push({
       id: 'pass2_ranking_liabilities',
       name: 'Total Ranking Liabilities (VD510 Row 33)',
-      formula: 'SUM(MAX(0, GRUP_NILAI_PASAR_WAJAR - 20% × TOTAL_ASET_LANCAR))',
+      formula: 'SUM(MAX(0, GRUP_NILAI_PASAR_WAJAR - 20% × TOTAL_EKUITAS))',
       inputValues: { 
-        totalAsetLancar,
-        batas20Persen: totalAsetLancar * 0.20,
+        totalEkuitas,
+        batas20Persen: totalEkuitas * 0.20,
         itemCount: vd510Details.length,
       },
       result: totalRankingLiabilities,
@@ -580,6 +618,7 @@ export function calculateMKBD(sheets: ProcessedSheet[]): MKBDCalculationResult {
 
   return {
     totalAsetLancar,
+    totalEkuitas,
     totalLiabilitas,
     totalRankingLiabilities,
     modalKerja,

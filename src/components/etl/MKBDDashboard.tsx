@@ -39,7 +39,7 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
   const isHealthy = result.lebihKurangMKBD >= 0;
   const mkbdRatio = (result.mkbdDisesuaikan / result.mkbdDiwajibkan) * 100;
   const rankingLiabilitiesRatio = result.totalRankingLiabilities > 0 
-    ? (result.totalRankingLiabilities / result.totalAsetLancar) * 100 
+    ? (result.totalRankingLiabilities / (result.totalEkuitas || 1)) * 100 
     : 0;
 
   return (
@@ -132,7 +132,7 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
       </Card>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Total Aset Lancar */}
         <Card>
           <CardContent className="pt-6">
@@ -142,6 +142,18 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
             </div>
             <p className="text-xs text-muted-foreground">Total Aset Lancar</p>
             <p className="text-xl font-bold">{formatShortNumber(result.totalAsetLancar)}</p>
+          </CardContent>
+        </Card>
+
+        {/* Total Ekuitas */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <ShieldCheck className="w-5 h-5 text-green-500" />
+              <Badge variant="outline" className="text-xs">VD52</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">Total Ekuitas</p>
+            <p className="text-xl font-bold">{formatShortNumber(result.totalEkuitas)}</p>
           </CardContent>
         </Card>
 
@@ -193,7 +205,7 @@ export function MKBDDashboard({ result }: MKBDDashboardProps) {
           <CardHeader>
             <CardTitle className="text-lg">Detail Ranking Liabilities (VD510)</CardTitle>
             <CardDescription>
-              Perhitungan per emiten yang melebihi 20% dari Total Modal Sendiri
+              Perhitungan per emiten yang melebihi 20% dari Total Ekuitas
             </CardDescription>
           </CardHeader>
           <CardContent>
