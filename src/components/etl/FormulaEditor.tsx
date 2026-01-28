@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CalculationStep } from '@/lib/etl/types';
 import { 
-  CalculationStep, 
   FormulaDefinition, 
   getFormulas, 
   updateFormula, 
@@ -218,7 +218,7 @@ export function FormulaEditor({ calculationSteps, onFormulaChange }: FormulaEdit
                           className="flex items-center justify-between p-2 bg-background rounded border text-xs"
                         >
                           <span className="text-muted-foreground truncate">{key}</span>
-                          <span className="font-mono font-medium">{formatNumber(value)}</span>
+                          <span className="font-mono font-medium">{formatNumber(value as number)}</span>
                         </div>
                       ))}
                     </div>

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { MKBDCalculationResult } from '@/lib/etl/mkbdCalculator';
+import { MKBDCalculationResult } from '@/lib/etl/types';
 import { cn } from '@/lib/utils';
 import { 
   TrendingUp, 
