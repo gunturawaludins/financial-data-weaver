@@ -14,7 +14,8 @@ import {
   Loader2,
   Info,
   Calculator,
-  TrendingUp
+  TrendingUp,
+  Download
 } from 'lucide-react';
 import { FileUpload } from './FileUpload';
 import { ExcelStylePreview } from './ExcelStylePreview';
@@ -22,7 +23,8 @@ import { DatabaseMonitor } from './DatabaseMonitor';
 import { MasterDataUpload } from './MasterDataUpload';
 import { FormulaEditor } from './FormulaEditor';
 import { MKBDDashboard } from './MKBDDashboard';
-import { extractFromExcel, ETLResult, calculateMKBD, MKBDCalculationResult } from '@/lib/etl';
+import { extractFromExcel, ETLResult, calculateMKBD, downloadFromTemplate } from '@/lib/etl';
+import { MKBDCalculationResult } from '@/lib/etl/types';
 import { createTableIfNotExists, appendRecords } from '@/lib/etl/database';
 import { DatabaseRecord } from '@/lib/etl/types';
 import { toast } from 'sonner';
@@ -31,17 +33,20 @@ export function ETLDashboard() {
   const [activeTab, setActiveTab] = useState('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [etlResult, setEtlResult] = useState<ETLResult | null>(null);
   const [selectedSheetIndex, setSelectedSheetIndex] = useState(0);
   const [fileName, setFileName] = useState<string>('');
   const [masterDataVersion, setMasterDataVersion] = useState(0);
   const [mkbdResult, setMkbdResult] = useState<MKBDCalculationResult | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const handleFileSelect = async (file: File) => {
     setIsProcessing(true);
     setEtlResult(null);
     setMkbdResult(null);
     setFileName(file.name);
+    setUploadedFile(file);
 
     try {
       const result = await extractFromExcel(file);
@@ -61,6 +66,24 @@ export function ETLDashboard() {
       toast.error('Terjadi kesalahan saat memproses file');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (!etlResult?.sheets.length || !uploadedFile) {
+      toast.error('Tidak ada data untuk di-export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await downloadFromTemplate(uploadedFile, etlResult.sheets, mkbdResult);
+      toast.success('File Excel berhasil di-export dengan angka terkoreksi');
+    } catch (error) {
+      console.error('Export Error:', error);
+      toast.error('Gagal mengexport file Excel');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -257,18 +280,33 @@ export function ETLDashboard() {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between flex-wrap gap-4">
                         <CardTitle>Preview Data Bersih</CardTitle>
-                        <Button 
-                          onClick={handleSaveToDatabase}
-                          disabled={isSaving}
-                          className="gap-2"
-                        >
-                          {isSaving ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Save className="w-4 h-4" />
-                          )}
-                          Simpan ke Database
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={handleExportExcel}
+                            disabled={isExporting || !uploadedFile}
+                            variant="outline"
+                            className="gap-2"
+                          >
+                            {isExporting ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                            Export Excel Terkoreksi
+                          </Button>
+                          <Button 
+                            onClick={handleSaveToDatabase}
+                            disabled={isSaving}
+                            className="gap-2"
+                          >
+                            {isSaving ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            Simpan ke Database
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">

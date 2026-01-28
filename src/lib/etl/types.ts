@@ -49,3 +49,52 @@ export interface StoredTable {
   records: DatabaseRecord[];
   lastUpdated: string;
 }
+
+// MKBD Calculation Types
+export interface VD59Update {
+  rowIndex: number;
+  rowDescription: string;
+  rowLabel?: string;
+  column: string;
+  oldValue: number;
+  newValue: number;
+  formula: string;
+}
+
+export interface VD510CalculationDetail {
+  rowIndex: number;
+  kodeEfek: string;
+  namaEfek: string;
+  nilaiPasarWajar: number;
+  grupEmiten: string;
+  persentaseTerhadapModal: number;
+  batas20Persen: number;
+  nilaiRankingLiabilities: number;
+  formula: string;
+}
+
+export interface CalculationStep {
+  id: string;
+  name: string;
+  formula: string;
+  inputValues: Record<string, number>;
+  result: number;
+  source: string;
+  editable: boolean;
+}
+
+export interface MKBDCalculationResult {
+  totalAsetLancar: number;
+  totalEkuitas: number;
+  totalLiabilitas: number;
+  totalRankingLiabilities: number;
+  modalKerja: number;
+  modalKerjaBersih: number;
+  mkbdDisesuaikan: number;
+  mkbdDiwajibkan: number;
+  lebihKurangMKBD: number;
+  calculationSteps: CalculationStep[];
+  vd510Details: VD510CalculationDetail[];
+  vd59Updates: VD59Update[];
+  haircutSum: number;
+}

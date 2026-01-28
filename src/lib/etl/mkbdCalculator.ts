@@ -1,55 +1,14 @@
 // MKBD Calculator - Multi-Pass Calculation Engine
 // Handles VD59 and VD510 calculations with Ranking Liabilities and Modal Kerja Bersih
 
-import { ProcessedSheet } from './types';
+import { 
+  ProcessedSheet, 
+  MKBDCalculationResult, 
+  VD59Update, 
+  CalculationStep, 
+  VD510CalculationDetail 
+} from './types';
 import { parseNumericValue } from './enrichment';
-
-export interface MKBDCalculationResult {
-  totalAsetLancar: number;
-  totalEkuitas: number;
-  totalLiabilitas: number;
-  totalRankingLiabilities: number;
-  modalKerja: number;
-  modalKerjaBersih: number;
-  mkbdDisesuaikan: number;
-  mkbdDiwajibkan: number;
-  lebihKurangMKBD: number;
-  calculationSteps: CalculationStep[];
-  vd510Details: VD510CalculationDetail[];
-  vd59Updates: VD59Update[];
-  haircutSum: number;
-}
-
-export interface VD59Update {
-  rowIndex: number;
-  rowDescription: string;
-  column: string;
-  oldValue: number;
-  newValue: number;
-  formula: string;
-}
-
-export interface CalculationStep {
-  id: string;
-  name: string;
-  formula: string;
-  inputValues: Record<string, number>;
-  result: number;
-  source: string;
-  editable: boolean;
-}
-
-export interface VD510CalculationDetail {
-  rowIndex: number;
-  kodeEfek: string;
-  namaEfek: string;
-  nilaiPasarWajar: number;
-  grupEmiten: string;
-  persentaseTerhadapModal: number;
-  batas20Persen: number;
-  nilaiRankingLiabilities: number;
-  formula: string;
-}
 
 export interface FormulaDefinition {
   id: string;
